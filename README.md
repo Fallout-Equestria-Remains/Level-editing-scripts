@@ -33,7 +33,7 @@ python FoER_rooms_unite.py rooms_mbase.xml mbase_room_template.xml
 ```
 python FoER_rooms_unite.py rooms_mbase.xml mbase_room_template.xml -o rooms_mbase.xml
 ```
-🠕 Concatenate "rooms_mbase.xml" and "mbase_room.template.xml" and writes back to the file "rooms_mbase.xml".
+🠕 Concatenate "rooms_mbase.xml" and "mbase_room_template.xml" and writes back to the file "rooms_mbase.xml".
 
 ```
 python FoER_rooms_unite.py --verbose --dry-run rooms_mbase.xml mbase_room_template.xml
