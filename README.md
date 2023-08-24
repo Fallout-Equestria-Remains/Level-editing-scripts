@@ -14,6 +14,8 @@ _Current scripts version is really young! Make backups before operations!_
 
 2. Library "FoER_rooms_lib.py" in this repo.
 
+3. Python libs `xml.dom.minidom` and `contextlib` (usually already preinstalled with Python)
+
 
 ### Examples
 
