@@ -10,9 +10,9 @@ _Current scripts version is really young! Make backups before operations!_
 
 ### Requirements
 
-1. [Python 3](https://www.python.org/downloads/) and above.
+1. [Python version 3](https://www.python.org/downloads/) or above.
 
-2. Library "FoER_rooms_lib.py" in this repo.
+2. Library "FoER_rooms_lib.py" from this repo.
 
 3. Python libs `xml.dom.minidom` and `contextlib` (usually already preinstalled with Python)
 
@@ -37,8 +37,7 @@ python FoER_rooms_unite.py rooms_mbase.xml mbase_room_template.xml -o rooms_mbas
 
 ```
 python FoER_rooms_unite.py --verbose --dry-run rooms_mbase.xml mbase_room_template.xml
-```
-```
+  -- OR --
 python FoER_rooms_unite.py -v -d rooms_mbase.xml mbase_room_template.xml
 ```
 🠕 Show what will be united without modifying anything (without writing to file).
@@ -59,8 +58,7 @@ python FoER_rooms_cut.py rooms_mbase.xml вертикаль
 
 ```
 python FoER_rooms_cut.py --verbose --dry-run rooms_mbase.xml вертикаль управление камеры кабинеты
-```
-```
+-- OR --
 python FoER_rooms_cut.py -v -d rooms_mbase.xml вертикаль управление камеры кабинеты
 ```
 🠕 Show rooms to remove without modifying anything (without writing to files).
