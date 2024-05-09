@@ -1,193 +1,95 @@
+import libfoerrooms as FoER
+from libfoerrooms import msgexit as exit
 import sys
-import FoER_rooms_lib
+import argparse
 
 
-DEFAULT_OUT_FILE='united_rooms.xml'
+DEFAULT_OUT_FILE="outrooms_united.xml"
 
 
-def print_unite_usage():
-	SCRIPT_PATH=sys.argv[0]
+argparser = argparse.ArgumentParser(
+	usage='''
+  %(prog)s file1.xml file2.xml [file3.xml ...] [-o OUTFILE] [-afsSv]
+  %(prog)s --help|--version''',
+	description=f'FoER locations room uniter v{FoER.SCRIPT_VERSION}. (c) Keirlex'
+)
 
-	print ( f'FoER random locations rooms uniter by Keirlex v{FoER_rooms_lib.SCRIPT_VERSION}.\n'
-			'  Do not use this script for serial locations!\n'
-			'  Script will not check input xml file correctness!\n'
-			'\nUsage:\n'
-			f'\t{SCRIPT_PATH} --help | --version\n'
-			f'\t{SCRIPT_PATH} rooms1.xml rooms2.xml [rooms3.xml...] [-o (outfile.xml | -)] [-a] [-f] [-v]\n'
-		)
-
-	FoER_rooms_lib.print_usage_args([
-		'--help or -h',
-		'--version or -V',
-		'<files.xml> (at least 2)',
-		'--output or -o <file.xml>',
-		'--safe-concat or -s',
-#		'--use-filename or -f',
-		'--dry-run or -d',
-		'--quiet or -q',
-		'--verbose or -v'
-	], [
-		'This help.',
-		'Print out version of the script.',
-		'Files to unite. Lastest room files has higher\npriority,their rooms will rewrite previous with the\nsame names (if no "-s" argument provided).',
-		f'Output file to write. If argument set to "-", output\nto stdout. If whole "-o" is omitted, will be used\nname "{DEFAULT_OUT_FILE}".\nNote that output file will be overwritten.',
-		'Terminate with message when trying to overwrite\nprevious room. Output file will not be created.',
-#		'Use filename as the room name if file contains only\none room.',
-		'Stop right before writing (do not output).',
-		'Be quiet and do not output anything except errors.',
-		'Be verbose and print what is happening.'
-	])
-
-TRY_HELP_PARAM=f'\nSee "{sys.argv[0]} --help".'
+argparser.add_argument('filenames', nargs='*', metavar='file1.xml file2.xml [file3.xml ...]', help='Files to unite. Lastest room files has higher priority, their rooms will rewrite previous with the same names (if no "-a" argument provided).')
+argparser.add_argument('-o', '--output', dest='outfile', default=DEFAULT_OUT_FILE, help=f'Output file to write. If name set to "-", output to stdout. If whole "-o" is omitted, will be used name "{DEFAULT_OUT_FILE}". Note that output file will be overwritten!')
+argparser.add_argument('-a', '--append-only', '--safe-concat', dest='safeconcat', default=False, action='store_true', help='Terminate with message when trying to overwrite some previous room. Output file will not be created or updated.')
+argparser.add_argument('-s', '--sort', action='store_const', default=0, const=1, dest='sortmode', help='Sort output by room names like in the default level editor.')
+argparser.add_argument('-S', '--sort-abc', action='store_const', default=0, const=2, dest='sortmode', help='Sort output by room names in lexicographic order.')
+argparser.add_argument('-v', '--verbose', action='store_true', help='Be verbose and print more info (including processed room names).')
+argparser.add_argument('-V', '--version', action='version', version=f'{FoER.SCRIPT_VERSION}', help='Print out version of the script and exit.')
+TRY_HELP_PARAM=f'\nSee "{sys.argv[0]} --help" for usage.'
 
 
-# unite.py (-h | --help)
-# unite.py (-V | --version)
-# unite.py -x file.xml -o directory [roomname] # Planned only
-# unite.py file1.xml file2.xml [file3.xml...] [--output (outfile.xml | -)] [--append-only] [--use-file-names] [--verbose]
-# unite.py file1.xml file2.xml [file3.xml...] [-o (outfile.xml | -)] [-a] [-n] [-v]
+args = argparser.parse_args()
+
+if len(args.filenames) < 2:
+	exit('At least 2 room files are required.' + TRY_HELP_PARAM, 1)
 
 
-argc = len(sys.argv) - 1
-argv = sys.argv[ 1: ]
-
-#argvLowered = [ i.lower() for i in argv ]
-#argvLowered = map(lower, argv)
+#
+# Main
+#
 
 
-# Help/version
-#if argc == 1:
-#	if argvLowered[0] == '--help' or argvLowered[0] == '-h' or argv[0] == '/?':
-#		print_usage()
-#		exit()
-#	elif argvLowered[0] == '--version' or argvLowered[0] == '-v':
-#		exit(SCRIPT_VERSION)
+allrooms = []
+allroomnames = []
 
+# Parsing rooms
+for infile in args.filenames:
+	parsedrooms = FoER.parse_rooms(infile)
+	newrooms = []
+	overwrrooms = []
 
-outfilepath = DEFAULT_OUT_FILE # If FoER_rooms_lib.STDOUT_OUT_FILE, output to stdout
-saferConcat = False
-verbose = False
-quiet = False
-dryrun = False
-onlyScriptInfo = 0 # 0 is no info, 1 is help, 2 is version
+	print(f'Parsed file {infile} with total of {len(parsedrooms)} rooms.', file=sys.stderr)
 
-
-roomfiles = []
-params = iter(range(len(argv)))
-
-for i in params:
-	prm = argv[i]
-
-	if prm == '--help' or prm == '-h':
-		onlyScriptInfo=1
-		break
-	elif prm == '--version' or prm == '-V':
-		onlyScriptInfo=2
-		break
-
-	if prm == '--safe-concat' or prm == '-s':
-		saferConcat=True
-	elif prm == '--verbose' or prm == '-v':
-		verbose=True
-		quiet=False
-	elif prm == '--quiet' or prm == '-q':
-		quiet=True
-		verbose=False
-	elif prm == '--outfile' or prm == '-o':
-		if i >= len(argv)-1:
-			exit('No output file name.')
+	for r in parsedrooms:
+		rname = r.get('name')
+		if not rname in allroomnames:
+			if args.verbose: print(f' + New room "{rname}".', file=sys.stderr)
+			newrooms.append(r)
 		else:
-			outfilepath=(argv[i+1] if argv[i+1] != '-' else FoER_rooms_lib.STDOUT_OUT_FILE)
-			next(params)
-	elif prm == '--dry-run' or prm == '-d':
-		dryrun = True
-	elif prm.startswith('-'):
-		exit(f'Unknown parameter "{prm}"' + TRY_HELP_PARAM)
-	else:
-		try:
-			f = open(prm, 'r', encoding='UTF-8')
-			roomfiles.append(f)
-		except:
-			exit(f'Cannot open file "{prm}" for reading.')
+			if args.verbose: print(f' ! Overwritng room "{rname}".', file=sys.stderr)
+			overwrrooms.append(r)
+
+	if args.safeconcat  and  len(overwrrooms) > 0:
+		print(f'Cannot safe append. Intersection of the next rooms from file "{infile}":', *[x.get('name') for x in overwrrooms], sep='\n ! ')
+		exit("Violation of the --append-only, abort.", 2)
+
+	# Add spaces before 1st <room> tag
+	if len(allrooms) > 0 and len(newrooms) > 0: allrooms[-1].tail = '\n  '
+
+	for r in overwrrooms:
+		allrooms[allroomnames.index(r.get('name'))] = r
+
+	allrooms = allrooms + newrooms
+	allroomnames = allroomnames + [ n.get('name') for n in newrooms ]
 
 
-# Script info output and exit
-if onlyScriptInfo == 1:
-	print_unite_usage()
-	exit()
-elif onlyScriptInfo == 2:
-	exit(FoER_rooms_lib.SCRIPT_VERSION)
+# Sorting
+if args.sortmode > 0:
+	editorLikeSort = True if args.sortmode == 1 else False
 
-if len(roomfiles) < 2:
-	exit( 'At least 2 room files is required.' + TRY_HELP_PARAM )
+	if args.verbose:
+		if editorLikeSort:
+			print(f'Sort as in the default level editor...', file=sys.stderr)
+		else:
+			print(f'Sort in lexicographic order...', file=sys.stderr)
 
-
-rooms = dict()
-
-totalroomCount=0
-curroom = str()
+	FoER.sort_rooms(allrooms, editorLikeSort)
 
 
-for roomfile in roomfiles:
-	curroom = ""
-	curroomCount=0
-	roomfileLines= roomfile.readlines()
+# Writing out
+if args.verbose:
+	print('United rooms:', *['"' + x.get('name') + '"' for x in allrooms], sep='\n * ', file=sys.stderr)
 
-	if verbose: print(f'Opened file "{roomfile.name}":')
+if args.outfile != FoER.STDOUT_OUT_FILE:
+	print(f'Total {len(allrooms)} united rooms. Writing to "{args.outfile}"...', file=sys.stderr)
+else:
+	print(f'Total {len(allrooms)} united rooms. Piping to stdout...', file=sys.stderr)
 
-
-	for i in range(len(roomfileLines)):
-		line1 = roomfileLines[i]
-		line = line1.strip() # with removed spaces
-
-		if line.startswith('<land'):
-			if FoER_rooms_lib.get_xml_elem(line, 'land', 'serial'):
-				exit(f'Tried to unite a serial location {roomfile.name} :/')
-		elif line.startswith('<room'):
-			xmlline = FoER_rooms_lib.get_xml_elem(line + '</room>', 'room', 'name')
-			if not xmlline:
-				exit(f'No room name at line {i+1} file {roomfile.name}')
-
-			curroom = xmlline
-
-			if rooms.get(curroom):
-				if saferConcat:
-					exit(f'Violation of the --safe-concat: tried to rewrite room "{curroom}" with other room from file "{roomfile.name}" at line {i+1}.')
-				elif verbose:
-					print(f' -Rewriting room "{curroom}"')
-			else:
-				totalroomCount += 1
-				if verbose: print(f' -New room "{curroom}"')
-
-			rooms[curroom] = line1
-			curroomCount += 1
-
-		elif line == '</room>':
-			rooms[curroom] += line1
-			curroom = ""
-		elif curroom:
-			# Main copy
-			rooms[curroom] += line1
-
-	if curroom != "":
-		exit(f'Unexpected EoF (no </room> tag) in "{roomfile.name}" while parsing room "{curroom}"')
-
-	if not quiet: print(f'Closed file "{roomfile.name}" with total of {curroomCount} rooms.')
-
-if dryrun:
-	if not quiet: print('Stop program before writing: --dry-run.')
-	exit()
-
-
-if verbose: print('Output to ' + (f'file "{outfilepath}"' if outfilepath != FoER_rooms_lib.STDOUT_OUT_FILE else 'stdout') + '...')
-
-with FoER_rooms_lib.write_file_or_stdout(outfilepath) as outfile:
-	outfile.write('<all>\n')
-
-	for key in rooms:
-		outfile.write(rooms[key])
-
-	outfile.write('</all>')
-
-if not quiet: print(f'Total rooms saved: {totalroomCount}.')
+FoER.write_rooms(allrooms, args.outfile)
 
